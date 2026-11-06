@@ -1,0 +1,485 @@
+<UserControl x:Class="AiderVS.ChatControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AiderVS"
+             xmlns:shell="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             MinWidth="280"
+             Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+             Foreground="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!-- Visual Studio theme colours, so the chat follows light / dark / blue themes. -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+            <Setter Property="Padding" Value="10,3" />
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+        </Style>
+        <Style TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowTextBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+        </Style>
+        <Style x:Key="LinkStyle" TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static shell:EnvironmentColors.ControlLinkTextBrushKey}}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid Margin="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Toolbar -->
+            <WrapPanel Grid.Row="0" Margin="0,0,0,4">
+                <Button x:Name="NewChatButton" Content="New chat" Click="NewChat_Click" Margin="0,0,6,2" />
+                <Button x:Name="SetupButton" Content="Setup" Click="SetupButton_Click" Margin="0,0,10,2"
+                        ToolTip="Check that Ollama, Aider and a coding model are installed, and download or update them." />
+                <CheckBox x:Name="FollowCheck" Content="Follow Solution Explorer / editor" Margin="0,0,10,2"
+                          ToolTip="When on, the file you highlight in Solution Explorer (or the editor tab you open) becomes the chat context."
+                          Checked="Mode_Changed" Unchecked="Mode_Changed" />
+                <CheckBox x:Name="AskOnlyCheck" Content="Ask only (no edits)" Margin="0,0,10,2"
+                          ToolTip="A pause switch: while it is ticked Aider answers and shows code but never changes your files. Agent mode and Apply edits automatically keep their setting and come back when you untick it."
+                          Checked="Mode_Changed" Unchecked="Mode_Changed" />
+                <CheckBox x:Name="AutoApplyCheck" Content="Apply edits automatically" Margin="0,0,10,2"
+                          ToolTip="Off: Aider's edits are shown first and written only when you press Apply. On: edits are written straight away."
+                          Checked="Mode_Changed" Unchecked="Mode_Changed" />
+                <CheckBox x:Name="AgentCheck" Content="Agent mode" Margin="0,0,0,2"
+                          ToolTip="Aider can see the whole project, add the files it needs and edit several files in one go. It works on a copy: nothing reaches your files until you press Apply."
+                          Checked="Mode_Changed" Unchecked="Mode_Changed" />
+            </WrapPanel>
+
+            <!-- Settings -->
+            <Expander Grid.Row="1" Header="Settings" Margin="0,0,0,4">
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Model" Margin="0,0,8,4" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="ModelBox" Margin="0,0,0,4" LostFocus="Settings_LostFocus"
+                             ToolTip="The model Aider uses. You can also pick one from the dropdown next to Send." />
+
+                    <TextBlock Grid.Row="1" Text="Ollama URL" Margin="0,0,8,4" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="OllamaBox" Margin="0,0,0,4" LostFocus="Settings_LostFocus" />
+
+                    <TextBlock Grid.Row="2" Text="Context size" Margin="0,0,8,4" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="CtxBox" Margin="0,0,0,4" LostFocus="Settings_LostFocus"
+                             ToolTip="Tokens Ollama keeps in memory per request (num_ctx)." />
+
+                    <TextBlock Grid.Row="3" Text="Aider path" Margin="0,0,8,4" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="AiderPathBox" Margin="0,0,0,4" LostFocus="Settings_LostFocus"
+                             ToolTip="Leave empty to use %USERPROFILE%\.local\bin\aider.exe or aider on PATH." />
+
+                    <TextBlock Grid.Row="4" Text="Extra args" Margin="0,0,8,4" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="ExtraArgsBox" Margin="0,0,0,4" LostFocus="Settings_LostFocus"
+                             ToolTip="For example: --edit-format whole" />
+
+                    <CheckBox Grid.Row="5" Grid.Column="1" x:Name="AutoCommitCheck" Content="Let Aider git-commit its edits"
+                              ToolTip="Only when edits are applied automatically inside a git repository."
+                              Checked="Settings_LostFocus" Unchecked="Settings_LostFocus" />
+                </Grid>
+            </Expander>
+
+            <!-- Transcript -->
+            <ScrollViewer Grid.Row="2" x:Name="Scroller" VerticalScrollBarVisibility="Auto" Margin="0,0,0,6">
+                <ItemsControl x:Name="MessageList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,8" Padding="8" BorderThickness="1" CornerRadius="4"
+                                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                                    Background="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Role}" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,2" />
+
+                                    <!-- Text, links and highlighted code blocks (with a copy icon) are built in code. -->
+                                    <StackPanel local:CodeText.Source="{Binding Text}" TextElement.FontFamily="{Binding Font}" />
+
+                                    <!-- Proposed changes wait here until the user decides (the same buttons also sit above the input). -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                                Visibility="{Binding ShowActions, Converter={StaticResource BoolToVis}}">
+                                        <Button Content="Apply changes" Tag="{Binding}" Click="ApplyChanges_Click" Margin="0,0,6,0"
+                                                ToolTip="Write the proposed changes into your project." />
+                                        <Button Content="Discard" Tag="{Binding}" Click="DiscardChanges_Click"
+                                                ToolTip="Throw the proposed changes away. Your files stay as they are." />
+                                    </StackPanel>
+                                    <StackPanel local:CodeText.Source="{Binding Status}" Margin="0,6,0,0"
+                                                Visibility="{Binding HasStatus, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Internet access history page: sits over the transcript, so the clock icon stays reachable -->
+            <Border Grid.Row="2" x:Name="WebHistoryPage" Visibility="Collapsed" Margin="0,0,0,6" Padding="8" BorderThickness="1" CornerRadius="4"
+                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                    Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Content="Back to chat" Click="HistoryButton_Click" />
+                        <Button DockPanel.Dock="Right" Content="Clear history" Margin="0,0,6,0" Click="HistoryClear_Click"
+                                ToolTip="Delete the saved list of what was read from the internet." />
+                        <TextBlock Text="Internet access history" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Opacity="0.8" Margin="0,0,0,8"
+                               Text="Every page and search Aider read from the internet, newest chat first. Aider only reads, and only after you allowed it. Click a page to open it in your browser." />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="WebHistoryView" />
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- Pending changes: always visible, so Apply can never scroll out of sight -->
+            <StackPanel Grid.Row="3">
+
+            <!-- Internet access: asks permission first, then shows what is being read -->
+            <Border x:Name="WebBar" Visibility="Collapsed" Margin="0,0,0,6" Padding="8" BorderThickness="2" CornerRadius="4"
+                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ControlLinkTextBrushKey}}"
+                    Background="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,4">
+                        <TextBlock DockPanel.Dock="Left" Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="WebTitle" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock x:Name="WebDetail" TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <ProgressBar x:Name="WebProgress" IsIndeterminate="True" Height="6" Margin="0,0,0,6" Visibility="Collapsed" />
+                    <CheckBox x:Name="WebRemember" Margin="0,0,0,6" Visibility="Collapsed" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="WebAllowButton" Content="Allow" Click="WebAllow_Click" Margin="0,0,6,0" FontWeight="SemiBold" />
+                        <Button x:Name="WebDenyButton" Content="Don't allow" Click="WebDeny_Click" />
+                        <Button x:Name="WebStopButton" Content="Stop" Click="WebStop_Click" Visibility="Collapsed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border x:Name="ProposalBar" Visibility="Collapsed" Margin="0,0,0,6" Padding="8" BorderThickness="2" CornerRadius="4"
+                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ControlLinkTextBrushKey}}"
+                    Background="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}">
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                        <Button Content="Apply changes" Click="BarApply_Click" Margin="0,0,6,0" FontWeight="SemiBold" />
+                        <Button Content="Discard" Click="BarDiscard_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="ProposalText" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            </StackPanel>
+
+            <!-- Skills: the adapter between SKILL.md files and Aider -->
+            <Expander Grid.Row="4" x:Name="SkillsExpander" Header="Skills" Margin="0,0,0,6">
+                <StackPanel Margin="0,4,0,0">
+                    <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="11" Margin="0,0,0,4"
+                               Text="Skills cost nothing until you use them. Type /name or $name in a message to use a skill for that message only, or tick 'always' to send one with every message. Each skill's text uses part of the model's memory." />
+                    <WrapPanel Margin="0,0,0,4">
+                        <CheckBox x:Name="AutoSkillsCheck" Content="Pick skills for me" Margin="0,0,10,2"
+                                  ToolTip="Off by default. Matches your request against the skill descriptions and may add skills you did not ask for, which use the model's memory."
+                                  Checked="SkillMode_Changed" Unchecked="SkillMode_Changed" />
+                        <CheckBox x:Name="SmartSkillsCheck" Content="Ask the model to confirm (slower)" Margin="0,0,0,2"
+                                  ToolTip="Only with 'Pick skills for me': one short extra call to the model, so only skills that clearly fit are used."
+                                  Checked="SkillMode_Changed" Unchecked="SkillMode_Changed" />
+                    </WrapPanel>
+
+                    <ListBox x:Name="SkillList" MaxHeight="150" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel LastChildFill="True">
+                                    <Button DockPanel.Dock="Right" Content="View" Padding="5,0" Tag="{Binding}" Click="PreviewSkill_Click"
+                                            ToolTip="Show exactly what Aider receives for this skill." />
+                                    <CheckBox DockPanel.Dock="Right" Content="always" Margin="6,0" IsChecked="{Binding Always}"
+                                              ToolTip="Send this skill with every message." />
+                                    <CheckBox IsChecked="{Binding Enabled}" ToolTip="{Binding Tooltip}">
+                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    </CheckBox>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Content="Refresh" Click="RefreshSkills_Click" />
+                        <Button DockPanel.Dock="Right" x:Name="TrustButton" Content="Trust this project's skills" Margin="0,0,6,0"
+                                Click="TrustSkills_Click" Visibility="Collapsed"
+                                ToolTip="This project contains skill files. They are loaded only after you trust the project, because they can steer what Aider does." />
+                        <TextBlock x:Name="SkillInfo" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+
+                    <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                        <TextBlock DockPanel.Dock="Left" Text="Extra folders" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBox x:Name="SkillFoldersBox" LostFocus="SkillFolders_LostFocus"
+                                 ToolTip="Folders that contain skill folders, separated by semicolons. Also scanned: .agents\skills, .claude\skills and .aidervs\skills in the project and in your user folder." />
+                    </DockPanel>
+                </StackPanel>
+            </Expander>
+
+            <!-- Context -->
+            <Expander Grid.Row="5" x:Name="ContextExpander" Header="Context: nothing yet" IsExpanded="True" Margin="0,0,0,6">
+                <StackPanel Margin="0,4,0,0">
+                    <ListBox x:Name="ContextList" MaxHeight="120" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel LastChildFill="True">
+                                    <Button DockPanel.Dock="Right" Content="x" Padding="5,0" Tag="{Binding}"
+                                            ToolTip="Remove from context" Click="RemoveItem_Click" />
+                                    <CheckBox DockPanel.Dock="Right" Content="read-only" Margin="6,0"
+                                              ToolTip="Aider may look at this file but never edits it."
+                                              IsChecked="{Binding ReadOnly}" />
+                                    <CheckBox DockPanel.Dock="Right" Content="pin" Margin="6,0"
+                                              ToolTip="Keep this file when the selection changes."
+                                              IsChecked="{Binding Pinned}" />
+                                    <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                        <Hyperlink Style="{StaticResource LinkStyle}" Click="LocateContextFile_Click" ToolTip="Show in File Explorer">
+                                            <Run Text="{Binding Name, Mode=OneWay}" />
+                                        </Hyperlink>
+                                    </TextBlock>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <DockPanel Margin="0,4,0,0" LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Content="Add selected" Click="AddSelected_Click"
+                                ToolTip="Pin whatever you last highlighted in Solution Explorer or the editor." />
+                        <CheckBox x:Name="IncludeSelectionCheck" Content="Attach highlighted editor code" IsChecked="True" />
+                    </DockPanel>
+
+                    <DockPanel x:Name="SnippetPanel" Margin="0,4,0,0" Visibility="Collapsed">
+                        <Button DockPanel.Dock="Right" Content="x" Padding="5,0" Click="ClearSnippet_Click" ToolTip="Forget this code" />
+                        <TextBlock x:Name="SnippetLabel" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </DockPanel>
+                </StackPanel>
+            </Expander>
+
+            <!-- Input -->
+            <Border Grid.Row="6" BorderThickness="1" CornerRadius="4" Padding="4"
+                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                    Background="{DynamicResource {x:Static shell:EnvironmentColors.ComboBoxBackgroundBrushKey}}">
+              <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- + : add files, a folder or the open documents to the context -->
+                <Button x:Name="AddButton" Grid.Row="0" Content="+" FontSize="15" Width="28" Height="24" Padding="0" Margin="0,0,0,4"
+                        HorizontalAlignment="Left" Click="AddButton_Click"
+                        ToolTip="Add files, a folder or the open documents to the context. You can also type @ in the message." />
+
+                <TextBox x:Name="InputBox" Grid.Row="1" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54" MaxHeight="150"
+                         BorderThickness="0" Background="Transparent"
+                         VerticalScrollBarVisibility="Auto" PreviewKeyDown="InputBox_PreviewKeyDown"
+                         TextChanged="InputBox_TextChanged"
+                         ToolTip="Enter sends, Shift+Enter adds a new line. Type @ to pick a file, or / or $ to pick a skill." />
+
+                <Grid Grid.Row="2" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Model dropdown -->
+                    <Button x:Name="ModelDropButton" HorizontalAlignment="Left" Click="ModelDrop_Click"
+                            ToolTip="The model Aider uses. Click to pick another installed model or download more.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="ModelDropText" MaxWidth="170" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="  &#x25BE;" />
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <!-- Internet access history: toggles the transcript area to a page of everything read from the web -->
+                        <Button x:Name="HistoryButton" Width="30" Padding="0" Margin="0,0,6,0" Click="HistoryButton_Click"
+                                ToolTip="Internet access history: see every page Aider read, by chat. Click again to go back to the chat.">
+                            <TextBlock x:Name="HistoryGlyph" Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Button>
+
+                        <!-- Internet access: off by default; Aider always asks before reading anything -->
+                        <Button x:Name="WebButton" Width="30" Padding="0" Margin="0,0,6,0" Click="WebButton_Click">
+                            <TextBlock x:Name="WebGlyph" Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Button>
+                        <Button x:Name="StopButton" Content="Stop" Margin="0,0,6,0" IsEnabled="False" Click="Stop_Click" />
+                        <Button x:Name="SendButton" Content="Send" Click="Send_Click" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- model dropdown list -->
+                <Popup x:Name="ModelDropPopup" PlacementTarget="{Binding ElementName=ModelDropButton}" Placement="Top"
+                       StaysOpen="False" AllowsTransparency="True">
+                    <Border BorderThickness="1" Padding="2"
+                            BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                            Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
+                        <StackPanel MinWidth="270">
+                            <TextBlock x:Name="ModelDropInfo" Margin="4,2" Opacity="0.7" />
+                            <ListBox x:Name="ModelDropList" MaxHeight="220" SelectionChanged="ModelDropList_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding SizeText}" Opacity="0.6" Margin="14,0,0,0" />
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button Content="Download or update models..." Margin="0,4,0,0" Click="ModelDropSetup_Click" />
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
+                <!-- + menu -->
+                <Popup x:Name="AddPopup" PlacementTarget="{Binding ElementName=AddButton}" Placement="Top"
+                       StaysOpen="False" AllowsTransparency="True">
+                    <Border BorderThickness="1" Padding="2"
+                            BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                            Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
+                        <StackPanel MinWidth="250">
+                            <Button Content="Add files..." Click="AddFiles_Click" HorizontalContentAlignment="Left" BorderThickness="0" Background="Transparent" Margin="0,0,0,2" />
+                            <Button Content="Add a folder..." Click="AddFolder_Click" HorizontalContentAlignment="Left" BorderThickness="0" Background="Transparent" Margin="0,0,0,2"
+                                    ToolTip="Adds the source files in the folder, as many as fit in the model's memory." />
+                            <Button Content="Add the open documents" Click="AddOpenDocs_Click" HorizontalContentAlignment="Left" BorderThickness="0" Background="Transparent" Margin="0,0,0,2" />
+                            <Border BorderThickness="0,1,0,0" Margin="0,4,0,4"
+                                    BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+                            <TextBlock x:Name="ProjectInfo" Margin="6,0,6,4" TextWrapping="Wrap" Opacity="0.7" FontSize="11" />
+                            <Button Content="Set the project folder..." Click="SetProject_Click" HorizontalContentAlignment="Left" BorderThickness="0" Background="Transparent" Margin="0,0,0,2"
+                                    ToolTip="Where Aider works and where new files go. Normally this is the folder Visual Studio has open." />
+                            <Button x:Name="ResetProjectButton" Content="Use the folder Visual Studio has open" Click="ResetProject_Click" HorizontalContentAlignment="Left"
+                                    BorderThickness="0" Background="Transparent" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
+                <!-- @file and /skill autocomplete -->
+                <Popup x:Name="FilePopup" PlacementTarget="{Binding ElementName=InputBox}" Placement="Top"
+                       StaysOpen="False" AllowsTransparency="True" Focusable="False">
+                    <Border BorderThickness="1" Padding="2"
+                            BorderBrush="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                            Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
+                        <ListBox x:Name="FileList" MaxHeight="190" MinWidth="280" Focusable="False"
+                                 MouseDoubleClick="FileList_MouseDoubleClick">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Rel}" ToolTip="{Binding Full}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Detail}" Opacity="0.6" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Popup>
+              </Grid>
+            </Border>
+        </Grid>
+
+        <!-- First-run setup wizard (also opened from the Setup button) -->
+        <Border x:Name="SetupOverlay" Visibility="Collapsed" Padding="10"
+                Background="{DynamicResource {x:Static shell:EnvironmentColors.ToolWindowBackgroundBrushKey}}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="Set up Aider Chat" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,10" Opacity="0.8"
+                               Text="This chat needs three things on your PC: Ollama (runs the AI model), Aider (does the editing) and a coding model. Nothing is downloaded until you press a button." />
+                    <TextBlock x:Name="SetupRamText" Opacity="0.7" Margin="0,0,0,8" />
+
+                    <!-- 1 Ollama -->
+                    <TextBlock Text="1. Ollama" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SetupOllamaStatus" TextWrapping="Wrap" Margin="12,2,0,2" />
+                    <WrapPanel Margin="12,0,0,10">
+                        <Button x:Name="SetupOllamaButton" Content="Install Ollama" Click="SetupOllama_Click" Margin="0,0,6,0" />
+                        <Button x:Name="SetupOllamaSite" Content="Open ollama.com/download" Click="SetupOllamaSite_Click" />
+                    </WrapPanel>
+
+                    <!-- 2 Aider -->
+                    <TextBlock Text="2. Aider" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SetupAiderStatus" TextWrapping="Wrap" Margin="12,2,0,2" />
+                    <WrapPanel Margin="12,0,0,10">
+                        <Button x:Name="SetupAiderButton" Content="Install Aider" Click="SetupAider_Click" />
+                    </WrapPanel>
+
+                    <!-- 3 Model -->
+                    <TextBlock Text="3. Coding model" FontWeight="SemiBold" />
+                    <TextBlock Margin="12,2,0,4" TextWrapping="Wrap" Opacity="0.8"
+                               Text="Bigger models write better code but need more memory and are slower. The one marked with a star suits this PC." />
+                    <ItemsControl x:Name="SetupModelList" Margin="12,0,0,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton GroupName="models" IsChecked="{Binding Selected, Mode=TwoWay}" Margin="0,2">
+                                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <WrapPanel Margin="12,4,0,4">
+                        <Button x:Name="SetupDownloadButton" Content="Download selected model" Click="SetupDownload_Click" Margin="0,0,6,0" />
+                        <Button x:Name="SetupCancelButton" Content="Stop" Click="SetupCancel_Click" IsEnabled="False" />
+                    </WrapPanel>
+                    <ProgressBar x:Name="SetupProgress" Height="8" Margin="12,0,0,2" Minimum="0" Maximum="1" Visibility="Collapsed" />
+                    <TextBlock x:Name="SetupModelStatus" TextWrapping="Wrap" Margin="12,0,0,10" />
+
+                    <!-- 4 Git -->
+                    <TextBlock Text="4. Git (optional)" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SetupGitStatus" TextWrapping="Wrap" Margin="12,2,0,2" />
+                    <WrapPanel Margin="12,0,0,10">
+                        <Button x:Name="SetupGitButton" Content="Open git-scm.com/download/win" Click="SetupGit_Click" />
+                    </WrapPanel>
+
+                    <TextBox x:Name="SetupLog" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="110" FontFamily="Consolas" FontSize="11"
+                             VerticalScrollBarVisibility="Auto" Visibility="Collapsed" Margin="0,0,0,8" />
+
+                    <WrapPanel>
+                        <Button x:Name="SetupRecheck" Content="Check again" Click="SetupRecheck_Click" Margin="0,0,6,0" />
+                        <Button x:Name="SetupDone" Content="Done" Click="SetupDone_Click" FontWeight="SemiBold" />
+                    </WrapPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

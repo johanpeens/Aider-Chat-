@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidAiderPackage">
+
+    <Groups>
+      <!-- Group that holds "Add to Aider chat" in the right-click menus. -->
+      <Group guid="guidAiderCmdSet" id="ContextGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE" />
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <!-- View > Other Windows > Aider Chat -->
+      <Button guid="guidAiderCmdSet" id="ShowChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Strings>
+          <ButtonText>Aider Chat</ButtonText>
+        </Strings>
+      </Button>
+
+      <!-- Right-click a file or the editor: Add to Aider chat -->
+      <Button guid="guidAiderCmdSet" id="AddToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAiderCmdSet" id="ContextGroup" />
+        <Strings>
+          <ButtonText>Add to Aider chat</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+
+  </Commands>
+
+  <CommandPlacements>
+    <!-- The same group also appears on projects, multi-selections and the code editor. -->
+    <CommandPlacement guid="guidAiderCmdSet" id="ContextGroup" priority="0x0600">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE" />
+    </CommandPlacement>
+    <CommandPlacement guid="guidAiderCmdSet" id="ContextGroup" priority="0x0600">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM" />
+    </CommandPlacement>
+    <CommandPlacement guid="guidAiderCmdSet" id="ContextGroup" priority="0x0600">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+    </CommandPlacement>
+  </CommandPlacements>
+
+  <Symbols>
+    <GuidSymbol name="guidAiderPackage" value="{f6a17576-67d3-4df9-8905-32f885059ab4}" />
+
+    <GuidSymbol name="guidAiderCmdSet" value="{cb085003-4cca-442c-9580-7b7221a8541c}">
+      <IDSymbol name="ContextGroup" value="0x1020" />
+      <IDSymbol name="ShowChatCommandId" value="0x0100" />
+      <IDSymbol name="AddToChatCommandId" value="0x0101" />
+    </GuidSymbol>
+  </Symbols>
+
+</CommandTable>

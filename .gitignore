@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+artifacts/
+*.vsix
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.log
+
+# Aider's own working files (history, caches) and files the launcher generates
+.aider*
+scripts/aider.model.settings.yml
