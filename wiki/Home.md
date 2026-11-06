@@ -1,6 +1,6 @@
 # Aider Chat for Visual Studio
 
-![Aider Chat window in Visual Studio](https://raw.githubusercontent.com/johanpeens/Aider-Chat-/main/docs/images/chat-window.png)
+![Aider Chat window in Visual Studio](images/chat-window.png)
 
 A chat window inside Visual Studio for [Aider](https://aider.chat), running on a **local coding model through Ollama**. It is free to run, and your code stays on your PC.
 

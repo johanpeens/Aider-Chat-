@@ -28,6 +28,10 @@ try {
     Get-ChildItem $work -Filter *.md | Remove-Item -Force
     Copy-Item (Join-Path $source '*.md') $work -Force
 
+    # images used by the pages (for example images/chat-window.png on the Home page)
+    $images = Join-Path $source 'images'
+    if (Test-Path $images) { Copy-Item $images $work -Recurse -Force }
+
     Push-Location $work
     git add -A
     if (-not (git status --porcelain)) { Write-Host 'The wiki is already up to date.'; return }
